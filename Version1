@@ -1,0 +1,289 @@
+import pandas as pd
+import os
+import glob
+
+# ------------------------------
+# CONFIGURACIÓN DEL USUARIO
+# ------------------------------
+
+# Ruta del archivo maestro AUTORIZACIONES_SURA.xls
+ruta_autorizaciones = r"C:\Users\JuanM.RamirezM\Desktop\JSON\SURA PIP\TABLAS\AUTORIAZACIONES_SURA.xls"
+
+# Carpeta donde están los .xls a procesar
+carpeta_archivos = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAMA PREVALENTE 2\PREVALENTE 2 MEDIOS"
+
+# Carpeta donde se guardarán los resultados
+carpeta_salida = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAMA PREVALENTE 2\PREVALENTE 2 MEDIOS\RESULTADO\CONTRIVUTIBO"
+os.makedirs(carpeta_salida, exist_ok=True)
+
+relacionDefinitiva = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAMA PREVALENTE 2\MAMA PREVALENTE II CONTRIBUTIVO.xlsx"
+
+TablaMedicamentos = r"C:\Users\JuanM.RamirezM\Downloads\SURA PIP\SURA PIP\TABLAS\MEDICAMENTOS.xlsx"
+
+
+def CruceInfo():
+    # ------------------------------
+    # LECTURA DEL ARCHIVO MAESTRO
+    # ------------------------------
+
+    lista = []
+
+    print("Leyendo archivo AUTORIZACIONES_SURA.xls ...")
+
+    df_master = pd.read_excel(ruta_autorizaciones, dtype=str)  # Leer como texto
+
+    # Normalizamos columnas por seguridad
+    df_master.columns = df_master.columns.str.strip()
+
+    # Verificación de columnas obligatorias
+    required_cols = ["ORDEN/EVENTO", "NUMERO IDENTIFICACION AFILIADO"]
+
+    for col in required_cols:
+        if col not in df_master.columns:
+            raise ValueError(f"La columna '{col}' no existe en AUTORIZACIONES_SURA.xls")
+
+    # ------------------------------
+    # BUSCAR Y LEER ARCHIVOS .xls
+    # ------------------------------
+
+    lista_archivos = glob.glob(os.path.join(carpeta_archivos, "*.xls")) 
+
+    print(f"Se encontraron {len(lista_archivos)} archivos XLS para procesar.\n")
+
+    for archivo in lista_archivos:
+        print(f"Procesando archivo: {archivo}")
+
+        # Leer como CSV forzado, con latin1 y TAB
+        df1 = pd.read_csv(archivo, encoding="latin1", sep="\t", dtype=str)
+
+        # Normalizamos columnas
+        df1.columns = df1.columns.str.strip()
+        
+
+        # Validación columna CONSEC_AUT
+        if "CONSEC_AUT" not in df1.columns:
+            print(f"⚠️  El archivo {archivo} NO tiene la columna CONSEC_AUT. Omitido.")
+            continue
+
+        # ------------------------------
+        # CRUCE DE INFORMACIÓN
+        # ------------------------------
+
+        df_merged = df1.merge(
+            df_master[["ORDEN/EVENTO", "NUMERO IDENTIFICACION AFILIADO", "TIPO ID AFILIADO"]],
+            left_on="CONSEC_AUT",
+            right_on="ORDEN/EVENTO",
+            how="left"
+        )
+
+        valor = df_merged["NUMERO IDENTIFICACION AFILIADO"].dropna().iloc[0]
+        df_merged["NUMERO IDENTIFICACION AFILIADO"] = valor
+
+        valorID = df_merged["TIPO ID AFILIADO"].dropna().iloc[0]
+        df_merged["TIPO ID AFILIADO"] = valorID
+
+
+        # Eliminamos la columna duplicada ORDEN/EVENTO si aparece
+        if "ORDEN/EVENTO" in df_merged.columns:
+            df_merged.drop(columns=["ORDEN/EVENTO"], inplace=True)
+
+
+        #MAPIAR LAS COLUMNAS
+        orden = list(df_merged.columns)
+
+        df_merged = df_merged[[orden[-1]] + orden[:-1]]
+
+        df_merged["CUPS"] = df_merged["PRESTACION_AUTORIZADA"].str.split("-").str[0]
+        df_merged["NOMBRES"] = df_merged["PRESTACION_AUTORIZADA"].str.split("-").str[1]
+
+        df_merged["auto1"] = df_merged["CONSEC_AUT"].str.split("-").str[0]
+        df_merged["auto2"] = df_merged["CONSEC_AUT"].str.split("-").str[1]
+
+
+
+
+        df_merged["CIE"] = df_merged["diagnostico"].str.split("-").str[0]
+
+        df_merged["NIT"] = df_merged["PRESTADOR"].str.split(" ").str[1]
+
+        df_merged = df_merged[df_merged["NIT"] == "890307200"]
+
+
+        #DAR FORMATO A LAS FECHAS
+        df_merged["FECHA"] = pd.to_datetime(df_merged["FECHA"])
+        df_merged["FECHA"] = df_merged["FECHA"].dt.strftime('%d/%m/%Y')
+        df_merged = df_merged.rename(columns={"FECHA": "FECHA_SURA"})
+
+
+        df_merged["CANTIDAD_AUTORIZADA"] = "1"
+        df_merged["CANTIDAD_REALIZADA"] = "1"
+        df_merged["COMODIN_1"] = "0"
+        df_merged["COMODIN_2"] = "0"
+
+
+        df_merged = df_merged[["TIPO ID AFILIADO","NUMERO IDENTIFICACION AFILIADO", "auto1", "auto2", "CONSEC_AUT", "ESTADO", "FECHA_SURA", "CUPS", "NOMBRES", "CANTIDAD_AUTORIZADA", "COMODIN_1", "CANTIDAD_REALIZADA", "COMODIN_2", "CIE", "NIT"]]
+
+        
+
+        lista.append(df_merged)
+
+
+        # ------------------------------
+        # EXPORTAR RESULTADO
+        # ------------------------------
+
+    df_final = pd.concat(lista, ignore_index=True)
+    df_masivo = df_final[["TIPO ID AFILIADO","NUMERO IDENTIFICACION AFILIADO", "auto1", "auto2", "CONSEC_AUT", "ESTADO", "FECHA_SURA", "CUPS", "NOMBRES", "CIE", "NIT"]]
+
+    ruta_salida = os.path.join(carpeta_salida, "Masivo.xlsx")
+    df_masivo.to_excel(ruta_salida, index=False)
+
+    return df_final
+
+    # print(df_final)
+
+
+
+    # print("Proceso finalizado con éxito.")
+
+
+def MedioMagnetico(medio):
+
+    df_medio = medio.copy()
+
+    # Leer relación definitiva
+    df = pd.read_excel(relacionDefinitiva, dtype=str)
+
+    # Normalizar columnas
+    df.columns = df.columns.str.strip()
+    df_medio.columns = df_medio.columns.str.strip()
+
+    df["Autorización"] = df["Autorización"].astype(str).str.strip()
+    df["Número ID"] = df["Número ID"].astype(str).str.strip()
+
+    df_medio["CONSEC_AUT"] = df_medio["CONSEC_AUT"].astype(str).str.strip()
+    df_medio["NUMERO IDENTIFICACION AFILIADO"] = df_medio["NUMERO IDENTIFICACION AFILIADO"].astype(str).str.strip()
+
+
+    # ------------------------------
+    # CRUCE FECHA RELACION DEFINITIVA
+    # ------------------------------
+
+    df["CRUCE_AUT"] = df["Autorización"]
+
+    ListaAutorizaciones = (df.drop_duplicates(subset="Autorización").set_index("Autorización")["Fecha Atención"])
+
+    df_medio["FECHA_CONSOLIDADO"] = df_medio["CONSEC_AUT"].map(ListaAutorizaciones)
+
+    df_medio["FECHA_CONSOLIDADO"] = pd.to_datetime(df_medio["FECHA_CONSOLIDADO"])
+    df_medio["FECHA_CONSOLIDADO"] = df_medio["FECHA_CONSOLIDADO"].dt.strftime('%d/%m/%Y')
+
+
+    # ------------------------------
+    # ORDEN DEL ARCHIVO PROCESADO
+    # ------------------------------
+
+
+    df_medio = df_medio[["TIPO ID AFILIADO","NUMERO IDENTIFICACION AFILIADO", "auto1", "auto2", "CONSEC_AUT", "ESTADO", "FECHA_CONSOLIDADO", "FECHA_SURA", "CUPS", "NOMBRES", "CANTIDAD_AUTORIZADA", "COMODIN_1", "CANTIDAD_REALIZADA", "COMODIN_2", "CIE", "NIT"]]
+
+
+    # ------------------------------
+    # IDENTIFICACION DE MEDICAMENTOS
+    # ------------------------------
+
+    df_medications = pd.read_excel(TablaMedicamentos, dtype=str)
+
+    medicamentos = df_medications["MEDICAMENTOS"].tolist()
+
+    df_medio.loc[df_medio["CUPS"].isin(medicamentos), "CANTIDAD_REALIZADA"] = "0"
+
+
+    # ------------------------------
+    # FILTRAR AUTORIZACIONES VÁLIDAS
+    # ------------------------------
+
+    autorizaciones_validas = df["Autorización"].dropna().unique()
+
+    df_validos = df_medio[
+        df_medio["CONSEC_AUT"].isin(autorizaciones_validas)
+    ].copy()
+
+    # ------------------------------
+    # AUTORIZACIONES FALTANTES
+    # ------------------------------
+
+    autorizaciones_medio = df_medio["CONSEC_AUT"].unique()
+    faltantes_aut = set(autorizaciones_validas) - set(autorizaciones_medio)
+
+    df_faltantes_aut = pd.DataFrame({
+        "CONSEC_AUT": list(faltantes_aut),
+        "NUMERO IDENTIFICACION AFILIADO": "",
+        "ESTADO": "",
+        "FECHA": "",
+        "CUPS": "",
+        "CIE": "",
+        "NIT": "",
+        "AUTO ERRONEA": "X",
+        "USUARIO NO ENCONTRADO": ""
+    })
+
+    # ------------------------------
+    # VALIDACIÓN DE USUARIOS (EN VALIDOS)
+    # ------------------------------
+
+    ids_validos = df["Número ID"].dropna().unique()
+
+    df_validos["USUARIO NO ENCONTRADO"] = ""
+    df_validos.loc[
+        ~df_validos["NUMERO IDENTIFICACION AFILIADO"].isin(ids_validos),
+        "USUARIO NO ENCONTRADO"
+    ] = "X"
+
+    df_validos["AUTO ERRONEA"] = ""
+
+    # ------------------------------
+    # USUARIOS FALTANTES
+    # ------------------------------
+
+    ids_medio = df_validos["NUMERO IDENTIFICACION AFILIADO"].unique()
+    faltantes_id = set(ids_validos) - set(ids_medio)
+
+    df_faltantes_id = pd.DataFrame({
+        "CONSEC_AUT": "",
+        "NUMERO IDENTIFICACION AFILIADO": list(faltantes_id),
+        "ESTADO": "",
+        "FECHA": "",
+        "CUPS": "",
+        "CIE": "",
+        "NIT": "",
+        "AUTO ERRONEA": "",
+        "USUARIO NO ENCONTRADO": "X"
+    })
+
+    # ------------------------------
+    # UNIRTODO
+    # ------------------------------
+
+    df_final = pd.concat(
+        [df_validos, df_faltantes_aut, df_faltantes_id],
+        ignore_index=True
+    )
+
+    del df_final["FECHA"]
+
+    # ------------------------------
+    # EXPORTAR
+    # ------------------------------
+
+    ruta_salida = os.path.join(carpeta_salida, "ArchivoProceso.xlsx")
+
+    df_final.to_excel(ruta_salida, index=False)
+
+    print("Proceso finalizado con éxito.")
+
+
+
+
+
+medio = CruceInfo()
+MedioMagnetico(medio)
