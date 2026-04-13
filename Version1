@@ -10,13 +10,13 @@ import glob
 ruta_autorizaciones = r"C:\Users\JuanM.RamirezM\Desktop\JSON\SURA PIP\TABLAS\AUTORIAZACIONES_SURA.xls"
 
 # Carpeta donde están los .xls a procesar
-carpeta_archivos = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAMA PREVALENTE 2\PREVALENTE 2 MEDIOS"
+carpeta_archivos = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\DB_RENAL"
 
 # Carpeta donde se guardarán los resultados
-carpeta_salida = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAMA PREVALENTE 2\PREVALENTE 2 MEDIOS\RESULTADO\CONTRIVUTIBO"
+carpeta_salida = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\SUBSIDIADO"
 os.makedirs(carpeta_salida, exist_ok=True)
 
-relacionDefinitiva = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAMA PREVALENTE 2\MAMA PREVALENTE II CONTRIBUTIVO.xlsx"
+relacionDefinitiva = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\2089808 PIP CA RENAL SUBSIDIADO MARZO DEL 2026.xlsx"
 
 TablaMedicamentos = r"C:\Users\JuanM.RamirezM\Downloads\SURA PIP\SURA PIP\TABLAS\MEDICAMENTOS.xlsx"
 
@@ -34,9 +34,14 @@ def CruceInfo():
 
     # Normalizamos columnas por seguridad
     df_master.columns = df_master.columns.str.strip()
+    
 
     # Verificación de columnas obligatorias
     required_cols = ["ORDEN/EVENTO", "NUMERO IDENTIFICACION AFILIADO"]
+
+
+    df_master["ORDEN/EVENTO"] = df_master["ORDEN/EVENTO"].astype(str).str.strip().replace(" ","", regex=True)
+    df_master["NUMERO IDENTIFICACION AFILIADO"] = df_master["NUMERO IDENTIFICACION AFILIADO"].astype(str).str.strip().replace(" ","", regex=True)
 
     for col in required_cols:
         if col not in df_master.columns:
@@ -58,6 +63,8 @@ def CruceInfo():
 
         # Normalizamos columnas
         df1.columns = df1.columns.str.strip()
+
+
         
 
         # Validación columna CONSEC_AUT
@@ -158,8 +165,12 @@ def MedioMagnetico(medio):
     df.columns = df.columns.str.strip()
     df_medio.columns = df_medio.columns.str.strip()
 
-    df["Autorización"] = df["Autorización"].astype(str).str.strip()
-    df["Número ID"] = df["Número ID"].astype(str).str.strip()
+    df["Autorización"] = df["Autorización"].astype(str).str.strip().replace(" ","", regex=True)
+    df["Número ID"] = df["Número ID"].astype(str).str.strip().replace(" ","", regex=True)
+    df["TIPO ID AFILIADO"] = df["TIPO ID AFILIADO"].astype(str).str.strip().replace(" ","", regex=True)
+
+
+    # print(df["Autorización"])
 
     df_medio["CONSEC_AUT"] = df_medio["CONSEC_AUT"].astype(str).str.strip()
     df_medio["NUMERO IDENTIFICACION AFILIADO"] = df_medio["NUMERO IDENTIFICACION AFILIADO"].astype(str).str.strip()
