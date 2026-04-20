@@ -10,15 +10,15 @@ import glob
 ruta_autorizaciones = r"C:\Users\JuanM.RamirezM\Desktop\JSON\SURA PIP\TABLAS\AUTORIAZACIONES_SURA.xls"
 
 # Carpeta donde están los .xls a procesar
-carpeta_archivos = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\DB_RENAL"
+carpeta_archivos = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP PULMON PREVALENTE\DB_PULMON_PREVALENTE"
 
 # Carpeta donde se guardarán los resultados
-carpeta_salida = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\SUBSIDIADO"
+carpeta_salida = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP PULMON PREVALENTE"
 os.makedirs(carpeta_salida, exist_ok=True)
 
-relacionDefinitiva = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\2089808 PIP CA RENAL SUBSIDIADO MARZO DEL 2026.xlsx"
+relacionDefinitiva = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP PULMON PREVALENTE\PREELIMINAR PREVALENTE.xlsx"
 
-TablaMedicamentos = r"C:\Users\JuanM.RamirezM\Downloads\SURA PIP\SURA PIP\TABLAS\MEDICAMENTOS.xlsx"
+TablaServicios = r"C:\Users\JuanM.RamirezM\Desktop\JSON\SURA PIP\TABLAS\Tipo_Servicios.xlsx"
 
 
 def CruceInfo():
@@ -202,12 +202,25 @@ def MedioMagnetico(medio):
     # IDENTIFICACION DE MEDICAMENTOS
     # ------------------------------
 
-    df_medications = pd.read_excel(TablaMedicamentos, dtype=str)
+    df_servicios = pd.read_excel(TablaServicios, dtype=str)
 
-    medicamentos = df_medications["MEDICAMENTOS"].tolist()
+    medicamentos = df_servicios["MEDICAMENTOS"].tolist()
 
     df_medio.loc[df_medio["CUPS"].isin(medicamentos), "CANTIDAD_REALIZADA"] = "0"
 
+    # ------------------------------
+    # CLASIFICAR SERVICIOS
+    # ------------------------------
+
+    df_medio["TipoServicio"] = None
+
+    ServiceConsultas = df_servicios["CONSULTAS"].to_list()
+    ServicePocedures = df_servicios["PROCEDIMIENTOS"].to_list()
+
+    df_medio.loc[df_medio["CUPS"].isin(ServiceConsultas), "TipoServicio"] = "CONSULTA"
+    df_medio.loc[df_medio["CUPS"].isin(ServicePocedures), "TipoServicio"] = "PROCEDIMIENTO"
+    df_medio.loc[df_medio["CUPS"].isin(medicamentos), "TipoServicio"] = "MEDICAMENTO"
+    df_medio.loc[df_medio["CUPS"].isin("300"), "TipoServicio"] = "INTERNACION"
 
     # ------------------------------
     # FILTRAR AUTORIZACIONES VÁLIDAS
