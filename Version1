@@ -7,18 +7,18 @@ import glob
 # ------------------------------
 
 # Ruta del archivo maestro AUTORIZACIONES_SURA.xls
-ruta_autorizaciones = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAYO 2026\PIP CARDIO\SURA_AUTO_TEST.xlsx"
+ruta_autorizaciones = r" "
 
 # Carpeta donde están los .xls a procesar
-carpeta_archivos = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAYO 2026\PIP CARDIO\DB_CARDIO"
+carpeta_archivos = r" "
 
 # Carpeta donde se guardarán los resultados
-carpeta_salida = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAYO 2026\PIP CARDIO\PRUEBA"
+carpeta_salida = r" "
 os.makedirs(carpeta_salida, exist_ok=True)
 
-relacionDefinitiva = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAYO 2026\PIP CARDIO\DEFINITIVO TEST.xlsx"
+relacionDefinitiva = r" "
 
-TablaServicios = r"C:\Users\JuanM.RamirezM\Desktop\JSON\SURA PIP\TABLAS\Tipo_Servicios.xlsx"
+TablaServicios = r" "
 
 
 def CruceInfo():
@@ -163,14 +163,15 @@ def MedioMagnetico(medio):
 
     # Normalizar columnas
     df.columns = df.columns.str.strip()
+    df = df.replace(r'\n', ' ', regex=True)
     df_medio.columns = df_medio.columns.str.strip()
 
     df["Autorización"] = df["Autorización"].astype(str).str.strip().replace(" ","", regex=True)
     df["Número ID"] = df["Número ID"].astype(str).str.strip().replace(" ","", regex=True)
-    df["TIPO ID AFILIADO"] = df["TIPO ID AFILIADO"].astype(str).str.strip().replace(" ","", regex=True)
+    df["Tipo ID"] = df["Tipo ID"].astype(str).str.strip().replace(" ","", regex=True)
 
 
-    # print(df["Autorización"])
+    # print(df["Autorización"]).
 
     df_medio["CONSEC_AUT"] = df_medio["CONSEC_AUT"].astype(str).str.strip()
     df_medio["NUMERO IDENTIFICACION AFILIADO"] = df_medio["NUMERO IDENTIFICACION AFILIADO"].astype(str).str.strip()
@@ -301,7 +302,7 @@ def MedioMagnetico(medio):
 
     ruta_salida = os.path.join(carpeta_salida, "ArchivoProceso.xlsx")
     if os.path.exists(ruta_salida):
-        print(f"El archivo {ruta_salida} ya existe. desea sobrescribirlo? (S/N)")
+        print(f"El documento ArchivoProceso.xlsx ya existe. desea sobrescribirlo? (S/N)")
         
         respuesta = input().upper()
         if respuesta == "S":
