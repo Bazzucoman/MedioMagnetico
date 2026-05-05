@@ -7,18 +7,18 @@ import glob
 # ------------------------------
 
 # Ruta del archivo maestro AUTORIZACIONES_SURA.xls
-ruta_autorizaciones = r"C:\Users\JuanM.RamirezM\Desktop\JSON\SURA PIP\TABLAS\AUTORIAZACIONES_SURA.xls"
+ruta_autorizaciones = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAYO 2026\PIP CARDIO\SURA_AUTO_TEST.xlsx"
 
 # Carpeta donde están los .xls a procesar
-carpeta_archivos = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\DB_RENAL"
+carpeta_archivos = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAYO 2026\PIP CARDIO\DB_CARDIO"
 
 # Carpeta donde se guardarán los resultados
-carpeta_salida = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\SUBSIDIADO"
+carpeta_salida = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAYO 2026\PIP CARDIO\PRUEBA"
 os.makedirs(carpeta_salida, exist_ok=True)
 
-relacionDefinitiva = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\ABRIL 2026\PIP RENAL\2089808 PIP CA RENAL SUBSIDIADO MARZO DEL 2026.xlsx"
+relacionDefinitiva = r"C:\Users\JuanM.RamirezM\Documents\SURA PIP\MAYO 2026\PIP CARDIO\DEFINITIVO TEST.xlsx"
 
-TablaMedicamentos = r"C:\Users\JuanM.RamirezM\Downloads\SURA PIP\SURA PIP\TABLAS\MEDICAMENTOS.xlsx"
+TablaServicios = r"C:\Users\JuanM.RamirezM\Desktop\JSON\SURA PIP\TABLAS\Tipo_Servicios.xlsx"
 
 
 def CruceInfo():
@@ -202,12 +202,25 @@ def MedioMagnetico(medio):
     # IDENTIFICACION DE MEDICAMENTOS
     # ------------------------------
 
-    df_medications = pd.read_excel(TablaMedicamentos, dtype=str)
+    df_servicios = pd.read_excel(TablaServicios, dtype=str)
 
-    medicamentos = df_medications["MEDICAMENTOS"].tolist()
+    medicamentos = df_servicios["MEDICAMENTOS"].tolist()
 
     df_medio.loc[df_medio["CUPS"].isin(medicamentos), "CANTIDAD_REALIZADA"] = "0"
 
+    # ------------------------------
+    # CLASIFICAR SERVICIOS
+    # ------------------------------
+
+    df_medio["TipoServicio"] = None
+
+    ServiceConsultas = df_servicios["CONSULTAS"].to_list()
+    ServicePocedures = df_servicios["PROCEDIMIENTOS"].to_list()
+    ServiceInternaciones = "300"  # Ejemplo de código para internación
+    df_medio.loc[df_medio["CUPS"].isin(ServiceConsultas), "TipoServicio"] = "CONSULTA"
+    df_medio.loc[df_medio["CUPS"].isin(ServicePocedures), "TipoServicio"] = "PROCEDIMIENTO"
+    df_medio.loc[df_medio["CUPS"].isin(medicamentos), "TipoServicio"] = "MEDICAMENTO"
+    df_medio.loc[df_medio["CUPS"].isin([ServiceInternaciones]), "TipoServicio"] = "INTERNACION"
 
     # ------------------------------
     # FILTRAR AUTORIZACIONES VÁLIDAS
@@ -287,12 +300,18 @@ def MedioMagnetico(medio):
     # ------------------------------
 
     ruta_salida = os.path.join(carpeta_salida, "ArchivoProceso.xlsx")
-
-    df_final.to_excel(ruta_salida, index=False)
-
-    print("Proceso finalizado con éxito.")
-
-
+    if os.path.exists(ruta_salida):
+        print(f"El archivo {ruta_salida} ya existe. desea sobrescribirlo? (S/N)")
+        
+        respuesta = input().upper()
+        if respuesta == "S":
+            df_final.to_excel(ruta_salida, index=False)
+            print("Proceso finalizado con éxito.")
+        else:
+            print("Proceso cancelado")
+    else:
+        df_final.to_excel(ruta_salida, index=False)
+        print("Proceso finalizado con éxito.")
 
 
 
